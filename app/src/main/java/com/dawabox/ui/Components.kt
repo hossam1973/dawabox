@@ -28,7 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.Medication
-import androidx.compose.material.icons.filled.MedicationLiquid
+import androidx.compose.material.icons.filled.LocalPharmacy
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.Card
@@ -59,7 +59,7 @@ import java.util.Locale
 
 fun MedForm.icon(): ImageVector = when (this) {
     MedForm.TABLET -> Icons.Filled.Medication
-    MedForm.CAPSULE -> Icons.Filled.MedicationLiquid
+    MedForm.CAPSULE -> Icons.Filled.LocalPharmacy
     MedForm.SYRUP -> Icons.Filled.LocalDrink
     MedForm.INJECTION -> Icons.Filled.Vaccines
     MedForm.DROPS -> Icons.Filled.WaterDrop

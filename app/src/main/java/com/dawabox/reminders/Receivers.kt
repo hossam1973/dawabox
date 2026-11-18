@@ -67,6 +67,9 @@ class ReminderReceiver : BroadcastReceiver() {
         }
         ReminderScheduler.enqueueMissedCheck(context, med.id, today.toString(), time, settings.missedAfterMinutes.toLong())
     }
+    companion object {
+        const val ACTION_FIRE = "com.dawabox.FIRE"
+    }
 }
 
 /** Notification buttons: taken / snooze / skip. */
