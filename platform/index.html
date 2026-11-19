@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>منصة تذكرة</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Readex+Pro:wght@500;700&display=swap">
+<style>
+/* Layout: top bar with two views (clinic dashboard / patient phone app), RTL, grid panels that stack on phones */
+:root{
+  --bg:#f3f6f5; --surface:#ffffff; --ink:#14302b; --muted:#5b726d; --line:#dbe5e2;
+  --accent:#0f7a68; --accent-soft:#dff1ec; --ok:#2f8f4e; --warn:#b7791f; --bad:#c2453a;
+  --ok-soft:#e3f3e8; --warn-soft:#fbf0dc; --bad-soft:#fbe5e2; --phone:#0e1f1c; --off:#c9d4d1;
+  --display:"Readex Pro","IBM Plex Sans Arabic",Tahoma,sans-serif;
+  --body:"IBM Plex Sans Arabic",Tahoma,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1715; --surface:#14211e; --ink:#e3eeeb; --muted:#93aaa4; --line:#24352f;
+  --accent:#3cc2a7; --accent-soft:#163a33; --ok:#5cc47c; --warn:#e2a84b; --bad:#ec7a6e;
+  --ok-soft:#173222; --warn-soft:#382c15; --bad-soft:#3a1d1a; --phone:#050b0a; --off:#33443f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1715; --surface:#14211e; --ink:#e3eeeb; --muted:#93aaa4; --line:#24352f;
+  --accent:#3cc2a7; --accent-soft:#163a33; --ok:#5cc47c; --warn:#e2a84b; --bad:#ec7a6e;
+  --ok-soft:#173222; --warn-soft:#382c15; --bad-soft:#3a1d1a; --phone:#050b0a; --off:#33443f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;line-height:1.3}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin-inline:auto}
+header.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-block:18px;border-bottom:1px solid var(--line);margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;border-radius:10px;background:var(--accent);display:grid;place-items:center}
+.brand h1{font-size:22px}.brand small{display:block;color:var(--muted);font-size:12px}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs a{padding:8px 16px;border-radius:9px;text-decoration:none;color:var(--muted);font-weight:500}
+.tabs a[aria-current="page"]{background:var(--accent);color:#fff}
+.demo{font-size:12px;color:var(--warn);background:var(--warn-soft);padding:3px 10px;border-radius:99px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.kpi span{color:var(--muted);font-size:13px}.kpi b{display:block;font-family:var(--display);font-size:28px;font-variant-numeric:tabular-nums}
+.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;min-width:0}
+.panel h2{font-size:17px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.panel.link{border-color:var(--accent)}
+.stack{display:grid;gap:16px;min-width:0}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:right;color:var(--muted);font-weight:500;font-size:12px;letter-spacing:.02em;padding:8px;border-bottom:1px solid var(--line)}
+td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr.sel td{background:var(--accent-soft)}
+td .name{background:none;border:0;padding:0;font-weight:600;text-align:right;color:var(--ink)}
+td .name:hover{color:var(--accent);text-decoration:underline}
+.bar{height:6px;background:var(--line);border-radius:9px;width:90px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:9px}
+.pill{display:inline-block;font-size:12px;padding:2px 10px;border-radius:99px;white-space:nowrap}
+.p-ok{background:var(--ok-soft);color:var(--ok)}.p-warn{background:var(--warn-soft);color:var(--warn)}.p-bad{background:var(--bad-soft);color:var(--bad)}.p-acc{background:var(--accent-soft);color:var(--accent)}
+form .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:grid;gap:4px;font-size:13px;color:var(--muted);margin-bottom:10px}
+input,select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:8px 10px;width:100%;min-width:0}
+textarea{resize:vertical;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;direction:ltr}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:10px;padding:9px 16px;font-weight:600}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn.sm{padding:5px 10px;font-size:13px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.chips label{display:flex;align-items:center;gap:6px;margin:0;background:var(--bg);border:1px solid var(--line);padding:5px 10px;border-radius:99px;color:var(--ink)}
+.chips input{width:auto}
+.list{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.list li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px}
+.list li:last-child{border-bottom:0}
+.muted{color:var(--muted);font-size:13px}
+.num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+.note{font-size:13px;padding:8px 10px;border-radius:9px;margin-top:8px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;align-items:end;height:150px;margin-top:6px}
+.week .col{display:grid;grid-template-rows:auto 1fr auto;height:100%;text-align:center;font-size:12px;color:var(--muted);gap:4px}
+.week .track{background:var(--line);border-radius:7px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;width:24px;margin-inline:auto}
+.week .track i{display:block}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:5px;vertical-align:-1px;background:var(--c)}
+/* patient app */
+.pview{display:grid;grid-template-columns:minmax(0,380px) 1fr;gap:28px;align-items:start;justify-content:center}
+.phone{background:var(--phone);border-radius:38px;padding:12px;box-shadow:0 20px 50px -20px rgba(0,0,0,.45);max-width:100%}
+.screen{background:var(--bg);border-radius:28px;min-height:640px;overflow:hidden;position:relative}
+.ptabs{display:flex;gap:4px;padding:8px 14px 0}
+.ptabs button{flex:1;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:6px 0;font-size:13px;color:var(--muted)}
+.ptabs button[aria-pressed="true"]{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sbar{display:flex;justify-content:space-between;padding:10px 20px 0;font-size:12px;color:var(--muted)}
+.hero{background:var(--accent);color:#fff;padding:18px 20px 22px;margin-top:8px}
+.hero small{opacity:.85}.hero h3{font-size:20px;margin:2px 0 12px}
+.next{background:rgba(255,255,255,.14);border-radius:14px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.next b{font-family:var(--display);font-size:22px}
+.sec{padding:14px 18px}.sec h4{margin:0 0 8px;font-family:var(--display);font-size:15px}
+.dose{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.dose .t{font-family:var(--display);font-size:15px;min-width:52px;text-align:center}
+.dose .info{flex:1;min-width:0}.dose .info b{display:block;font-size:14px}
+.dose.done{opacity:.6}
+.dose .acts{display:flex;gap:4px;flex-direction:column}
+.boxes{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.boxes button{border:2px solid var(--off);background:var(--surface);border-radius:10px;padding:6px 0;display:grid;justify-items:center;gap:2px;font-family:var(--display)}
+.boxes button i{width:10px;height:10px;border-radius:50%;background:var(--off)}
+.boxes button.due{border-color:var(--warn)}.boxes button.due i{background:var(--warn);animation:blink 1s infinite}
+.boxes button.full{border-color:var(--ok)}.boxes button.full i{background:var(--ok)}
+.boxes button.empty i{background:var(--muted)}
+@keyframes blink{50%{opacity:.25}}
+.say{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.say button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:5px 10px;font-size:13px}
+.chat{display:grid;gap:6px;margin-top:10px;max-height:210px;overflow:auto}
+.chat p{margin:0;padding:8px 12px;border-radius:14px;font-size:14px;max-width:88%}
+.chat .me{background:var(--accent);color:#fff;justify-self:start}
+.chat .box{background:var(--surface);border:1px solid var(--line);justify-self:end}
+.notif{position:absolute;top:30px;inset-inline:10px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:12px 14px;box-shadow:0 12px 30px -10px rgba(0,0,0,.35);transform:translateY(-140%);transition:transform .35s ease;z-index:5}
+.notif.show{transform:translateY(0)}
+.notif b{display:block}
+.side h2{font-size:22px;margin-bottom:8px}
+.side p{color:var(--muted);max-width:52ch}
+.feat{display:grid;gap:10px;margin:16px 0}
+.feat div{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.toast{position:fixed;bottom:calc(20px + env(safe-area-inset-bottom,0px));inset-inline-start:50%;transform:translateX(50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;font-size:14px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20}
+.toast.show{opacity:1}
+@media (max-width:900px){.grid,.pview{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.phone{margin-inline:auto;width:100%;max-width:380px}}
+@media (max-width:420px){form .row{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap" dir="rtl" lang="ar">
+<header class="top">
+  <div class="brand">
+    <div class="logo" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="3" y="8" width="18" height="8" rx="4"/><path d="M12 8v8"/><path d="M17 3l2 2"/></svg></div>
+    <div><h1>تذكرة</h1><small>منصة العيادة مرتبطة بتطبيق «علبة الدواء» للمريض</small></div>
+  </div>
+  <nav class="tabs" aria-label="الأقسام">
+    <a href="#clinic" id="tab-clinic">لوحة العيادة</a>
+    <a href="#patient" id="tab-patient">تطبيق المريض</a>
+  </nav>
+  <span class="demo">بيانات تجريبية</span>
+</header>
+
+<!-- CLINIC -->
+<main id="view-clinic">
+  <section class="kpis" aria-label="ملخص اليوم">
+    <div class="kpi"><span>المرضى المتابَعون</span><b id="k-pat">0</b></div>
+    <div class="kpi"><span>تذكيرات اليوم</span><b id="k-rem">0</b></div>
+    <div class="kpi"><span>الالتزام (7 أيام)</span><b id="k-adh">0%</b></div>
+    <div class="kpi"><span>جرعات فائتة اليوم</span><b id="k-miss">0</b></div>
+  </section>
+  <div class="grid">
+    <div class="stack">
+      <section class="panel">
+        <h2>المرضى <span class="muted" id="pcount"></span></h2>
+        <div class="tbl"><table>
+          <thead><tr><th>المريض</th><th>الحالة</th><th>الأدوية</th><th>الالتزام</th><th>آخر تقرير</th><th></th></tr></thead>
+          <tbody id="ptable"></tbody>
+        </table></div>
+      </section>
+      <section class="panel">
+        <h2><span>الالتزام الأسبوعي: <span id="w-name"></span></span><span class="muted" id="w-src"></span></h2>
+        <div class="week" id="week"></div>
+        <div class="legend"><span style="--c:var(--ok)">في الموعد</span><span style="--c:var(--bad)">فائتة</span></div>
+        <p class="muted" id="w-stock" style="margin:8px 0 0"></p>
+      </section>
+      <section class="panel">
+        <h2>سجل التذكيرات والتقارير</h2>
+        <ul class="list" id="log"></ul>
+      </section>
+    </div>
+    <div class="stack">
+      <section class="panel link">
+        <h2>الربط مع تطبيق المريض</h2>
+        <label for="rx-pat">وصفة المريض<select id="rx-pat"></select></label>
+        <p class="muted" style="margin:0 0 6px">أرسل هذا الرمز للمريض بالواتساب. في التطبيق: أدويتي ← استيراد وصفة من العيادة، فتُضاف أدويته ومواعيده بتنبيهاتها.</p>
+        <textarea id="rx-code" rows="3" readonly aria-label="رمز الوصفة"></textarea>
+        <div class="btns" style="margin-top:8px"><button class="btn" id="rx-copy" type="button">نسخ الرمز</button></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:14px 0">
+        <label for="rep-in">تقرير من التطبيق
+          <textarea id="rep-in" rows="3" placeholder="الصق هنا رسالة التقرير التي أرسلها المريض (تحتوي DAWA-REPORT:)"></textarea></label>
+        <button class="btn ghost" id="rep-go" type="button">تحديث ملف المريض من التقرير</button>
+        <div id="rep-msg"></div>
+      </section>
+      <section class="panel">
+        <h2>تذكير دواء جديد</h2>
+        <form id="f-med">
+          <label for="m-pat">المريض<select id="m-pat" required></select></label>
+          <div class="row">
+            <label for="m-name">اسم الدواء<input id="m-name" required placeholder="مثال: ميتفورمين"></label>
+            <label for="m-dose">الجرعة<input id="m-dose" required placeholder="500 ملغ"></label>
+          </div>
+          <div class="row">
+            <label for="m-form">الشكل<select id="m-form">
+              <option value="TABLET">قرص</option><option value="CAPSULE">كبسولة</option><option value="SYRUP">شراب</option>
+              <option value="INJECTION">حقنة</option><option value="DROPS">قطرة</option><option value="INHALER">بخاخ</option></select></label>
+            <label for="m-stock">الكمية المصروفة<input id="m-stock" type="number" min="0" value="30"></label>
+          </div>
+          <div class="row">
+            <label for="m-t1">الوقت الأول<input id="m-t1" type="time" required value="08:00"></label>
+            <label for="m-t2">الوقت الثاني (اختياري)<input id="m-t2" type="time"></label>
+          </div>
+          <label for="m-note">تعليمات<input id="m-note" placeholder="بعد الأكل"></label>
+          <div class="muted" style="margin-bottom:6px">وسائل التنبيه</div>
+          <div class="chips">
+            <label><input type="checkbox" id="c-app" checked> إشعار الهاتف</label>
+            <label><input type="checkbox" id="c-voice" checked> صوت العلبة</label>
+            <label><input type="checkbox" id="c-sms" checked> SMS للمرافق</label>
+            <label><input type="checkbox" id="c-email"> بريد</label>
+            <label><input type="checkbox" id="c-wa"> واتساب</label>
+          </div>
+          <button class="btn" type="submit">حفظ التذكير</button>
+        </form>
+      </section>
+      <section class="panel">
+        <h2>موعد جديد</h2>
+        <form id="f-apt">
+          <label for="a-pat">المريض<select id="a-pat" required></select></label>
+          <div class="row">
+            <label for="a-date">التاريخ<input id="a-date" type="date" required></label>
+            <label for="a-time">الوقت<input id="a-time" type="time" required value="10:30"></label>
+          </div>
+          <label for="a-doc">الطبيب / العيادة<input id="a-doc" required placeholder="د. سارة - عيادة السكري"></label>
+          <button class="btn" type="submit">حجز وتذكير قبل يوم وقبل ساعتين</button>
+        </form>
+      </section>
+      <section class="panel">
+        <h2>المواعيد القادمة</h2>
+        <ul class="list" id="apts"></ul>
+      </section>
+    </div>
+  </div>
+</main>
+
+<!-- PATIENT -->
+<main id="view-patient" hidden>
+  <div class="pview">
+    <div class="phone"><div class="screen" id="screen">
+      <div class="notif" id="notif" role="status"><b id="n-title">حان موعد الدواء</b><span class="muted" id="n-body"></span>
+        <div style="display:flex;gap:6px;margin-top:8px"><button class="btn sm" id="n-take">تم الأخذ</button><button class="btn sm ghost" id="n-snooze">بعد 10 دقائق</button></div></div>
+      <div class="sbar"><span class="num" id="clock">--:--</span><span>علبة الدواء</span></div>
+      <div class="ptabs" role="group" aria-label="أقسام التطبيق">
+        <button type="button" data-pt="today" aria-pressed="true">اليوم</button>
+        <button type="button" data-pt="box" aria-pressed="false">العلبة</button>
+      </div>
+      <div id="pt-today">
+        <div class="hero">
+          <small>مرحباً،</small><h3 id="p-name">—</h3>
+          <div class="next"><div><small>الجرعة القادمة</small><div id="nx-med">لا توجد جرعات متبقية اليوم</div></div><b class="num" id="nx-in"></b></div>
+        </div>
+        <div class="sec"><h4>أدوية اليوم <span class="muted" id="p-prog"></span></h4><div id="doses"></div></div>
+        <div class="sec"><h4>مواعيدي</h4><ul class="list" id="p-apts"></ul></div>
+      </div>
+      <div id="pt-box" hidden>
+        <div class="sec">
+          <h4>حجرات العلبة</h4>
+          <div class="boxes" id="boxes"></div>
+          <div class="legend"><span style="--c:var(--warn)">حان موعدها</span><span style="--c:var(--ok)">ممتلئة</span><span style="--c:var(--muted)">فارغة</span></div>
+          <h4 style="margin-top:14px">تحدث مع العلبة</h4>
+          <div class="say" id="say">
+            <button type="button">أخذت الدواء</button><button type="button">ما جرعتي التالية؟</button>
+            <button type="button">ما أدويتي اليوم؟</button><button type="button">كم بقي من الدواء؟</button>
+          </div>
+          <div class="chat" id="chat" aria-live="polite"></div>
+        </div>
+      </div>
+    </div></div>
+    <div class="side">
+      <h2>تطبيق المريض</h2>
+      <p>هذا عرض لتطبيق «علبة الدواء» على هاتف المريض. التطبيق الحقيقي لأندرويد يفعل الشيء نفسه مع منبّه دقيق وأوامر صوتية بالميكروفون، ويستقبل الوصفة من هذه المنصة ويرسل لها تقرير الالتزام.</p>
+      <label for="sel-p">عرض التطبيق كالمريض<select id="sel-p"></select></label>
+      <div class="btns">
+        <button class="btn" id="test-n">جرّب التنبيه الآن</button>
+        <button class="btn ghost" id="mk-report">أرسل تقرير الالتزام للعيادة</button>
+        <button class="btn ghost" id="reset">إعادة البيانات التجريبية</button>
+      </div>
+      <div class="feat">
+        <div><b>تنبيه في وقت الجرعة</b><div class="muted">إشعار بصوت ونطق اسم الدواء، وزر تأجيل لعشر دقائق.</div></div>
+        <div><b>علبة ناطقة</b><div class="muted">سبع حجرات بأضواء، وتجيب عن: ما جرعتي التالية؟ كم بقي من الدواء؟</div></div>
+        <div><b>تنبيه المرافق</b><div class="muted">عند فوات جرعة: SMS تلقائي، وواتساب وبريد بضغطة.</div></div>
+        <div><b>تقرير للعيادة</b><div class="muted">رمز DAWA-REPORT تلصقه العيادة فيتحدث ملف المريض.</div></div>
+      </div>
+    </div>
+  </div>
+</main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+const KEY='tadhkira-v2';
+const iso=d=>{const z=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())};
+const today=()=>iso(new Date());
+const addDays=n=>{const d=new Date();d.setDate(d.getDate()+n);return iso(d)};
+function sampleWeek(meds,pct,seed){const total=meds.reduce((a,m)=>a+m.times.length,0);
+  return Array.from({length:7},(_,i)=>{const wob=((seed*7+i*13)%5)-2;const taken=Math.max(0,Math.min(total,Math.round(total*pct/100)+(wob>1?-1:0)));
+    return {date:addDays(i-6),taken,missed:total-taken,total}})}
+function seed(){
+  const P=[
+    {id:1,name:'أحمد العتيبي',cond:'سكري النوع 2',meds:[
+      {id:11,name:'ميتفورمين',dose:'500 ملغ',form:'TABLET',times:['08:00','20:00'],note:'بعد الأكل',ch:['app','voice','sms'],stock:42,box:1},
+      {id:12,name:'أتورفاستاتين',dose:'20 ملغ',form:'TABLET',times:['21:30'],note:'قبل النوم',ch:['app','voice'],stock:18,box:2}],
+     taken:{'11@08:00':'taken'},pct:92},
+    {id:2,name:'فاطمة الزهراني',cond:'ارتفاع ضغط الدم',meds:[
+      {id:21,name:'أملوديبين',dose:'5 ملغ',form:'TABLET',times:['09:00'],note:'',ch:['app','sms','email'],stock:25,box:1}],
+     taken:{},pct:71},
+    {id:3,name:'خالد المطيري',cond:'ربو',meds:[
+      {id:31,name:'بخاخ بوديزونيد',dose:'بختان',form:'INHALER',times:['07:30','19:30'],note:'اشطف الفم بعده',ch:['voice','wa'],stock:4,box:1}],
+     taken:{'31@07:30':'missed'},pct:58},
+    {id:4,name:'نورة القحطاني',cond:'قصور الغدة الدرقية',meds:[
+      {id:41,name:'ليفوثيروكسين',dose:'75 مكغ',form:'TABLET',times:['06:30'],note:'على معدة فارغة',ch:['app','voice'],stock:60,box:1}],
+     taken:{'41@06:30':'taken'},pct:97}];
+  P.forEach(p=>{p.week=sampleWeek(p.meds,p.pct,p.id);p.reportAt=null});
+  return {day:today(),patients:P,
+   apts:[
+    {pid:1,date:addDays(1),time:'10:30',doc:'د. سارة - عيادة السكري'},
+    {pid:3,date:addDays(3),time:'12:00',doc:'د. يوسف - الصدرية'},
+    {pid:2,date:addDays(6),time:'09:15',doc:'د. منى - القلب'}],
+   log:[{t:'07:30',txt:'واتساب إلى مرافق خالد المطيري: فاتته جرعة بخاخ بوديزونيد'},{t:'06:30',txt:'إشعار وصوت العلبة إلى نورة القحطاني: ليفوثيروكسين'}],
+   cur:1,sel:1,snooze:{},chat:[]};
+}
+let S;
+function load(){try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
+  if(!S||!S.patients)S=seed();
+  if(S.day!==today()){S.day=today();S.patients.forEach(p=>p.taken={});S.snooze={};}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+load();
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nowHM=()=>{const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+const fmtT=t=>{let[h,m]=t.split(':').map(Number);const ap=h<12?'ص':'م';h=h%12||12;return h+':'+String(m).padStart(2,'0')+' '+ap};
+const fmtD=d=>new Date(d+'T00:00').toLocaleDateString('ar',{weekday:'long',day:'numeric',month:'long'});
+const dayShort=d=>new Date(d+'T00:00').toLocaleDateString('ar',{weekday:'short'});
+const chName={app:'إشعار',voice:'صوت العلبة',sms:'SMS',email:'بريد',wa:'واتساب'};
+const chCode={app:'APP',voice:'VOICE',sms:'SMS',email:'EMAIL',wa:'WHATSAPP'};
+const pat=id=>S.patients.find(p=>p.id==id);
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('show'),2400)}
+function minsAfter(t){const[h,m]=t.split(':').map(Number);const n=new Date();return n.getHours()*60+n.getMinutes()-(h*60+m)}
+
+function doses(p){const out=[];p.meds.forEach(m=>m.times.forEach(t=>out.push({m,t,key:m.id+'@'+t})));return out.sort((a,b)=>a.t.localeCompare(b.t))}
+function statusOf(p,d){const st=p.taken[d.key];if(st)return st;const late=minsAfter(d.t);return late<0?'due-later':late<30?'due':'late'}
+function weekPct(p){const t=p.week.reduce((a,d)=>a+d.total,0);return t?Math.round(p.week.reduce((a,d)=>a+d.taken,0)*100/t):0}
+function syncToday(p){const ds=doses(p);const day=p.week.find(d=>d.date===today());
+  const tk=ds.filter(d=>p.taken[d.key]==='taken').length,ms=ds.filter(d=>{const s=statusOf(p,d);return s==='missed'||s==='late'}).length;
+  if(day){day.total=ds.length;day.taken=tk;day.missed=ms}else{p.week.push({date:today(),taken:tk,missed:ms,total:ds.length});p.week=p.week.slice(-7)}}
+
+// ---- codes shared with the Android app (same format as ClinicLink.kt) ----
+function b64(s){const bytes=new TextEncoder().encode(s);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin)}
+function unb64(s){return new TextDecoder().decode(Uint8Array.from(atob(s),c=>c.charCodeAt(0)))}
+function payload(text,prefix){const i=text.indexOf(prefix);if(i<0)return null;return text.slice(i+prefix.length).trim().split(/\s/)[0]||null}
+function rxCode(p){
+  return 'DAWA-RX:'+b64(JSON.stringify({v:1,type:'rx',patient:p.name,clinic:'منصة تذكرة',
+    meds:p.meds.map((m,i)=>({name:m.name,dosage:m.dose,form:m.form||'TABLET',frequency:'DAILY',times:m.times,startDate:today(),
+      compartment:m.box||((i%7)+1),instructions:m.note||'',stock:m.stock??30,channels:m.ch.map(c=>chCode[c]).filter(Boolean)})),
+    appointments:S.apts.filter(a=>a.pid===p.id).map(a=>({doctor:a.doc,place:'',dateTime:a.date+'T'+a.time,notes:''}))}));
+}
+function reportCode(p){syncToday(p);
+  return 'DAWA-REPORT:'+b64(JSON.stringify({v:1,type:'report',patient:p.name,days:p.week,meds:p.meds.map(m=>({name:m.name,dosage:m.dose,stock:m.stock??0}))}));
+}
+function importReport(text){
+  const raw=payload(text,'DAWA-REPORT:');if(!raw)return {ok:false,msg:'لم أجد رمزاً يبدأ بـ DAWA-REPORT: في النص.'};
+  let r;try{r=JSON.parse(unb64(raw))}catch(e){return {ok:false,msg:'الرمز ناقص أو تالف. انسخ رسالة التقرير كاملة.'}}
+  let p=S.patients.find(x=>x.name.trim()===String(r.patient||'').trim());let created=false;
+  if(!p){p={id:Date.now(),name:r.patient||'مريض من التطبيق',cond:'من تطبيق علبة الدواء',meds:[],taken:{},pct:0,week:[]};S.patients.push(p);created=true}
+  (r.meds||[]).forEach(rm=>{const m=p.meds.find(m=>m.name===rm.name);if(m)m.stock=rm.stock;else p.meds.push({id:Date.now()+Math.random(),name:rm.name,dose:rm.dosage||'',form:'TABLET',times:[],note:'',ch:['app'],stock:rm.stock})});
+  p.week=(r.days||[]).slice(-7);p.reportAt=new Date().toISOString();S.sel=p.id;
+  const pct=weekPct(p);const low=(r.meds||[]).filter(m=>m.stock<=5).map(m=>m.name);
+  S.log.unshift({t:nowHM(),txt:`تقرير من تطبيق ${p.name}: الالتزام ${pct}%`+(low.length?`، قارب على النفاد: ${low.join('، ')}`:'')});
+  return {ok:true,msg:(created?'أُضيف مريض جديد: ':'حُدّث ملف ')+p.name+` · الالتزام ${pct}%`+(low.length?` · ينفد قريباً: ${low.join('، ')}`:'')};
+}
+
+function renderClinic(){
+  S.patients.forEach(syncToday);
+  const all=S.patients.flatMap(p=>doses(p).map(d=>({p,d})));
+  const missed=all.filter(x=>{const s=statusOf(x.p,x.d);return s==='missed'||s==='late'}).length;
+  const avg=S.patients.length?Math.round(S.patients.reduce((a,p)=>a+weekPct(p),0)/S.patients.length):0;
+  $('k-pat').textContent=S.patients.length;$('k-rem').textContent=all.length;$('k-adh').textContent=avg+'%';$('k-miss').textContent=missed;
+  $('pcount').textContent=S.patients.length+' مرضى';
+  $('ptable').innerHTML=S.patients.map(p=>{const a=weekPct(p);const c=a>=85?'ok':a>=70?'warn':'bad';
+    const rep=p.reportAt?new Date(p.reportAt).toLocaleDateString('ar',{day:'numeric',month:'short'}):'—';
+    return `<tr class="${p.id==S.sel?'sel':''}"><td><button class="name" data-sel="${p.id}">${esc(p.name)}</button></td><td class="muted">${esc(p.cond)}</td><td>${p.meds.map(m=>esc(m.name)).join('، ')||'—'}</td>
+    <td><div style="display:flex;align-items:center;gap:8px"><div class="bar"><i style="width:${a}%;background:var(--${c})"></i></div><span class="pill p-${c} num">${a}%</span></div></td>
+    <td class="muted">${rep}</td><td><div class="btns"><button class="btn sm ghost" data-remind="${p.id}">تذكير الآن</button><button class="btn sm ghost" data-rx="${p.id}">رمز للتطبيق</button></div></td></tr>`}).join('');
+  const opts=S.patients.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+  ['m-pat','a-pat','sel-p','rx-pat'].forEach(id=>{const v=$(id).value;$(id).innerHTML=opts;if(v&&pat(v))$(id).value=v});
+  $('sel-p').value=S.cur;if(!$('rx-pat').value)$('rx-pat').value=S.sel;
+  $('rx-code').value=rxCode(pat($('rx-pat').value)||S.patients[0]);
+  // weekly chart for the selected patient
+  const sp=pat(S.sel)||S.patients[0];$('w-name').textContent=sp.name;
+  $('w-src').textContent=sp.reportAt?'من تقرير التطبيق':'بيانات تجريبية';
+  $('week').innerHTML=sp.week.map(d=>{const tf=d.total?d.taken/d.total*100:0,mf=d.total?d.missed/d.total*100:0;
+    return `<div class="col" title="${fmtD(d.date)}: ${d.taken} من ${d.total}"><span class="num">${d.total?Math.round(tf)+'%':'—'}</span>
+    <div class="track"><i style="height:${mf}%;background:var(--bad)"></i><i style="height:${tf}%;background:var(--ok)"></i></div><span>${dayShort(d.date)}</span></div>`}).join('');
+  const low=sp.meds.filter(m=>(m.stock??99)<=5);
+  $('w-stock').textContent='المخزون: '+(sp.meds.map(m=>`${m.name} ${m.stock??'—'}`).join('، ')||'—')+(low.length?` · اطلب عبوة جديدة: ${low.map(m=>m.name).join('، ')}`:'');
+  $('log').innerHTML=S.log.slice(0,8).map(l=>`<li><span>${esc(l.txt)}</span><span class="muted num">${fmtT(l.t)}</span></li>`).join('')||'<li class="muted">لا توجد تذكيرات بعد</li>';
+  $('apts').innerHTML=S.apts.slice().sort((x,y)=>(x.date+x.time).localeCompare(y.date+y.time)).map(a=>{const p=pat(a.pid);
+    return `<li><span><b>${esc(p?p.name:'')}</b><br><span class="muted">${esc(a.doc)}</span></span><span style="text-align:left"><span class="pill p-acc">${fmtD(a.date)}</span><br><span class="muted num">${fmtT(a.time)}</span></span></li>`}).join('');
+}
+
+function boxState(p,n){const ds=doses(p).filter(d=>(d.m.box||1)===n);if(!ds.length)return '';
+  if(ds.some(d=>['due','late'].includes(statusOf(p,d))))return 'due';if(ds.some(d=>statusOf(p,d)==='due-later'))return 'full';return 'empty'}
+function renderPatient(){
+  const p=pat(S.cur)||S.patients[0];
+  $('p-name').textContent=p.name;
+  const ds=doses(p);const done=ds.filter(d=>p.taken[d.key]==='taken').length;
+  $('p-prog').textContent=`(${done} من ${ds.length})`;
+  $('doses').innerHTML=ds.map(d=>{const s=statusOf(p,d);
+    const pill=s==='taken'?'<span class="pill p-ok">تم</span>':s==='missed'?'<span class="pill p-bad">فاتت</span>':s==='late'?'<span class="pill p-warn">متأخرة</span>':s==='due'?'<span class="pill p-acc">الآن</span>':'<span class="pill p-acc">قادمة</span>';
+    const act=s==='taken'?'':`<div class="acts"><button class="btn sm" data-take="${d.key}">تم الأخذ</button></div>`;
+    return `<div class="dose ${s==='taken'?'done':''}"><div class="t num">${fmtT(d.t)}</div><div class="info"><b>${esc(d.m.name)}</b><span class="muted">${esc(d.m.dose)} · الحجرة ${d.m.box||1}${d.m.note?' · '+esc(d.m.note):''}</span><div>${pill}</div></div>${act}</div>`}).join('')||'<p class="muted">لا توجد أدوية.</p>';
+  const nx=nextDose(p);
+  if(nx){const diff=-minsAfter(nx.t);$('nx-med').textContent=nx.m.name+' · '+fmtT(nx.t);$('nx-in').textContent=diff<=0?'الآن':diff<60?`${diff} د`:`${Math.floor(diff/60)} س ${diff%60} د`;}
+  else{$('nx-med').textContent='لا توجد جرعات متبقية اليوم';$('nx-in').textContent='';}
+  $('p-apts').innerHTML=S.apts.filter(a=>a.pid===p.id).map(a=>`<li><span>${esc(a.doc)}</span><span class="muted">${fmtD(a.date)} · <span class="num">${fmtT(a.time)}</span></span></li>`).join('')||'<li class="muted">لا توجد مواعيد</li>';
+  $('boxes').innerHTML=Array.from({length:7},(_,i)=>`<button type="button" class="${boxState(p,i+1)}" data-box="${i+1}" aria-label="الحجرة ${i+1}"><i></i>${i+1}</button>`).join('');
+  $('chat').innerHTML=(S.chat||[]).slice(-8).map(c=>`<p class="${c.me?'me':'box'}">${esc(c.t)}</p>`).join('')||'<p class="box">مرحباً، أنا علبة الدواء. اختر سؤالاً بالأعلى.</p>';
+  $('chat').scrollTop=1e6;
+}
+function nextDose(p){const ds=doses(p);return ds.find(d=>['due','late'].includes(statusOf(p,d)))||ds.find(d=>statusOf(p,d)==='due-later')}
+function render(){renderClinic();renderPatient();$('clock').textContent=fmtT(nowHM());save()}
+
+// ---- talking pillbox (speech synthesis; starts only from a click) ----
+function speak(t){try{const u=new SpeechSynthesisUtterance(t);u.lang='ar-SA';u.rate=.95;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+function takeDose(p,key,by){if(p.taken[key]==='taken')return false;p.taken[key]='taken';const m=p.meds.find(m=>m.id+'@'+key.split('@')[1]===key);if(m&&m.stock>0)m.stock--;
+  if(by)S.log.unshift({t:nowHM(),txt:`${p.name} سجّل ${m?m.name:'جرعة'} ${by}`});return true}
+function ask(q){const p=pat(S.cur);let a;
+  if(q.includes('أخذت')){const d=nextDose(p);if(!d)a='لا توجد جرعات متبقية اليوم. أحسنت!';else{takeDose(p,d.key,'بالصوت');const n=nextDose(p);a=`تم تسجيل ${d.m.name} ${d.m.dose}.`+(n?` جرعتك التالية ${n.m.name} الساعة ${fmtT(n.t)}.`:' انتهت جرعات اليوم.')}}
+  else if(q.includes('التالية')){const d=nextDose(p);a=d?`جرعتك التالية ${d.m.name} ${d.m.dose} الساعة ${fmtT(d.t)} من الحجرة رقم ${d.m.box||1}`+(d.m.note?`، ${d.m.note}.`:'.'):'لا توجد جرعات متبقية اليوم.'}
+  else if(q.includes('اليوم')){const ds=doses(p);a=ds.length?`لديك ${ds.length} جرعات اليوم، أخذت منها ${ds.filter(d=>p.taken[d.key]==='taken').length}. `+ds.map(d=>`${d.m.name} ${fmtT(d.t)}`).join('، ')+'.':'لا توجد أدوية مجدولة اليوم.'}
+  else{a=p.meds.map(m=>`${m.name}: ${m.stock??'غير معروف'}`+((m.stock??99)<=5?' وهو قليل، اطلب عبوة جديدة':'')).join('، ')+'.'}
+  S.chat=(S.chat||[]).concat([{me:1,t:q},{me:0,t:a}]).slice(-12);speak(a);render()}
+$('say').onclick=e=>{const b=e.target.closest('button');if(b)ask(b.textContent)};
+$('boxes').onclick=e=>{const b=e.target.closest('[data-box]');if(!b)return;const p=pat(S.cur),n=+b.dataset.box;
+  const ds=doses(p).filter(d=>(d.m.box||1)===n);const a=ds.length?`الحجرة ${n} فيها `+[...new Set(ds.map(d=>d.m.name))].join('، ')+' · '+ds.map(d=>fmtT(d.t)).join('، '):`الحجرة ${n} فارغة.`;
+  S.chat=(S.chat||[]).concat([{me:0,t:a}]).slice(-12);speak(a);render()};
+document.querySelectorAll('[data-pt]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-pt]').forEach(x=>x.setAttribute('aria-pressed',x===b));$('pt-today').hidden=b.dataset.pt!=='today';$('pt-box').hidden=b.dataset.pt!=='box'});
+
+// alarm sound (after a user click)
+let ac;function beep(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();[0,.18].forEach(o=>{const g=ac.createGain(),os=ac.createOscillator();os.frequency.value=880;os.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(.0001,ac.currentTime+o);g.gain.exponentialRampToValueAtTime(.2,ac.currentTime+o+.02);g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+o+.15);os.start(ac.currentTime+o);os.stop(ac.currentTime+o+.16)})}catch(e){}}
+let pending=null;
+function notify(p,d){pending={pid:p.id,key:d.key};$('n-title').textContent='حان موعد '+d.m.name;$('n-body').textContent=d.m.dose+' · الحجرة '+(d.m.box||1)+(d.m.note?' · '+d.m.note:'');$('notif').classList.add('show');beep();
+  if(d.m.ch.includes('voice'))speak(`حان موعد ${d.m.name} ${d.m.dose} من الحجرة رقم ${d.m.box||1}.`);
+  S.log.unshift({t:nowHM(),txt:d.m.ch.map(c=>chName[c]).join(' + ')+' إلى '+p.name+': '+d.m.name});}
+function hideN(){$('notif').classList.remove('show');pending=null}
+$('n-take').onclick=()=>{if(pending){takeDose(pat(pending.pid),pending.key,'من الإشعار');toast('سُجّلت الجرعة')}hideN();render()};
+$('n-snooze').onclick=()=>{if(pending){const d=new Date(Date.now()+10*60000);S.snooze[pending.pid+'#'+pending.key]=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');toast('سيُعاد التذكير بعد 10 دقائق')}hideN();render()};
+$('test-n').onclick=()=>{const p=pat(S.cur);const ds=doses(p);const d=ds.find(d=>!p.taken[d.key])||ds[0];if(!d){toast('لا توجد أدوية لهذا المريض');return}location.hash='patient';notify(p,d);render()};
+$('reset').onclick=()=>{S=seed();render();toast('أُعيدت البيانات التجريبية')};
+$('sel-p').onchange=e=>{S.cur=+e.target.value;S.chat=[];hideN();render()};
+$('mk-report').onclick=()=>{const p=pat(S.cur);const msg=`تقرير الالتزام بالدواء – ${p.name}\nآخر 7 أيام: ${weekPct(p)}%\n\nرمز التقرير لمنصة العيادة:\n${reportCode(p)}`;
+  $('rep-in').value=msg;location.hash='clinic';$('rep-in').focus();toast('وصل التقرير إلى خانة «تقرير من التطبيق» في لوحة العيادة')};
+$('rx-pat').onchange=()=>{$('rx-code').value=rxCode(pat($('rx-pat').value))};
+$('rx-copy').onclick=()=>{const t=$('rx-code');const done=()=>toast('نُسخ رمز الوصفة');
+  try{navigator.clipboard.writeText(t.value).then(done,()=>{t.select();toast('حدّد الرمز وانسخه يدوياً')})}catch(e){t.select();toast('حدّد الرمز وانسخه يدوياً')}};
+$('rep-go').onclick=()=>{const r=importReport($('rep-in').value);$('rep-msg').innerHTML=`<div class="note ${r.ok?'p-ok':'p-bad'}">${esc(r.msg)}</div>`;if(r.ok){$('rep-in').value='';render()}};
+
+document.addEventListener('click',e=>{const t=e.target.closest('[data-take]');if(t){takeDose(pat(S.cur),t.dataset.take);toast('سُجّلت الجرعة');render();return}
+  const s=e.target.closest('[data-sel]');if(s){S.sel=+s.dataset.sel;$('rx-pat').value=S.sel;render();return}
+  const x=e.target.closest('[data-rx]');if(x){S.sel=+x.dataset.rx;$('rx-pat').value=S.sel;render();$('rx-code').scrollIntoView({block:'center'});$('rx-code').select();return}
+  const r=e.target.closest('[data-remind]');if(r){const p=pat(r.dataset.remind);const d=doses(p).find(d=>!p.taken[d.key]);
+    S.log.unshift({t:nowHM(),txt:(d?d.m.ch.map(c=>chName[c]).join(' + '):'إشعار')+' إلى '+p.name+(d?': '+d.m.name:': متابعة')});toast('أُرسل التذكير إلى '+p.name);render()}});
+
+$('f-med').onsubmit=e=>{e.preventDefault();const p=pat($('m-pat').value);
+  const times=[$('m-t1').value,$('m-t2').value].filter(Boolean);const ch=['app','voice','sms','email','wa'].filter(c=>$('c-'+c).checked);
+  const used=new Set(p.meds.map(m=>m.box));let box=1;while(used.has(box)&&box<7)box++;
+  p.meds.push({id:Date.now(),name:$('m-name').value.trim(),dose:$('m-dose').value.trim(),form:$('m-form').value,times,note:$('m-note').value.trim(),ch:ch.length?ch:['app'],stock:+$('m-stock').value||0,box});
+  e.target.reset();$('m-t1').value='08:00';$('m-stock').value=30;['app','voice','sms'].forEach(c=>$('c-'+c).checked=true);
+  S.sel=p.id;$('rx-pat').value=p.id;toast('حُفظ التذكير. أرسل رمز الوصفة الجديد لـ '+p.name);render()};
+$('f-apt').onsubmit=e=>{e.preventDefault();S.apts.push({pid:+$('a-pat').value,date:$('a-date').value,time:$('a-time').value,doc:$('a-doc').value.trim()});
+  e.target.reset();$('a-time').value='10:30';$('a-date').value=addDays(1);toast('حُجز الموعد. أرسل رمز الوصفة ليصل للتطبيق');render()};
+$('a-date').value=addDays(1);
+
+function tick(){const hm=nowHM();const p=pat(S.cur);
+  doses(p).forEach(d=>{const sk=p.id+'#'+d.key;if(!p.taken[d.key]&&(d.t===hm||S.snooze[sk]===hm)&&!pending){delete S.snooze[sk];notify(p,d)}});render()}
+setInterval(tick,30000);
+
+function route(){const v=location.hash==='#patient'?'patient':'clinic';$('view-clinic').hidden=v!=='clinic';$('view-patient').hidden=v!=='patient';
+  $('tab-clinic').removeAttribute('aria-current');$('tab-patient').removeAttribute('aria-current');$('tab-'+v).setAttribute('aria-current','page')}
+window.addEventListener('hashchange',route);route();render();
+})();
+</script>
+</body>
+</html>
