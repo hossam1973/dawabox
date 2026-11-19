@@ -113,3 +113,40 @@ object ReminderScheduler {
         WorkManager.getInstance(context).cancelUniqueWork(missedWorkName(medId, date, time))
     }
 }
+
+/** Alarms 24 h and 2 h before each doctor appointment. */
+object AppointmentReminders {
+    /** Minutes before the appointment. */
+    val OFFSETS = listOf(24 * 60L, 120L)
+    const val EXTRA_APT_ID = "apt_id"
+    const val EXTRA_OFFSET = "offset_min"
+
+    private fun pending(context: Context, aptId: Long, index: Int, flags: Int): PendingIntent? =
+        PendingIntent.getBroadcast(
+            context, (700_000_000L + aptId * 10 + index).toInt(),
+            Intent(context, AppointmentReceiver::class.java).apply {
+                putExtra(EXTRA_APT_ID, aptId)
+                putExtra(EXTRA_OFFSET, OFFSETS[index])
+            },
+            flags or PendingIntent.FLAG_IMMUTABLE
+        )
+
+    fun schedule(context: Context, apt: com.dawabox.data.AppointmentEntity) {
+        val am = context.getSystemService(AlarmManager::class.java)
+        val now = LocalDateTime.now()
+        val at = runCatching { LocalDateTime.parse(apt.dateTime) }.getOrNull() ?: return
+        OFFSETS.forEachIndexed { i, before ->
+            val fire = at.minusMinutes(before)
+            val pi = pending(context, apt.id, i, PendingIntent.FLAG_UPDATE_CURRENT) ?: return@forEachIndexed
+            if (!fire.isAfter(now)) { am.cancel(pi); return@forEachIndexed }
+            val millis = fire.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            if (ReminderScheduler.canScheduleExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
+            else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, millis, pi)
+        }
+    }
+
+    fun cancel(context: Context, aptId: Long) {
+        val am = context.getSystemService(AlarmManager::class.java)
+        OFFSETS.indices.forEach { i -> pending(context, aptId, i, PendingIntent.FLAG_NO_CREATE)?.let { am.cancel(it); it.cancel() } }
+    }
+}

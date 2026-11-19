@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.dawabox.R
+import com.dawabox.data.AppointmentEntity
 import com.dawabox.data.MedicationEntity
 import com.dawabox.ui.MainActivity
 
@@ -21,6 +22,7 @@ object Notifier {
     const val CH_DOSE = "dose_reminders"
     const val CH_CAREGIVER = "caregiver_alerts"
     const val CH_STOCK = "low_stock"
+    const val CH_APPOINTMENT = "appointments"
 
     fun createChannels(context: Context) {
         val nm = context.getSystemService(NotificationManager::class.java)
@@ -44,6 +46,11 @@ object Notifier {
         )
         nm.createNotificationChannel(
             NotificationChannel(CH_STOCK, "نفاد الدواء", NotificationManager.IMPORTANCE_DEFAULT)
+        )
+        nm.createNotificationChannel(
+            NotificationChannel(CH_APPOINTMENT, "مواعيد الطبيب", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "تذكير قبل موعد الطبيب بيوم وبساعتين"
+            }
         )
     }
 
@@ -128,6 +135,26 @@ object Notifier {
             .setAutoCancel(true)
             .build()
         try { NotificationManagerCompat.from(context).notify(900_000 + med.id.toInt(), n) } catch (_: SecurityException) {}
+    }
+
+    fun showAppointment(context: Context, apt: AppointmentEntity, whenText: String) {
+        if (!canNotify(context)) return
+        val body = buildString {
+            append(apt.doctor)
+            if (apt.place.isNotBlank()) append(" · ").append(apt.place)
+            if (apt.notes.isNotBlank()) append(" · ").append(apt.notes)
+        }
+        val n = NotificationCompat.Builder(context, CH_APPOINTMENT)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("موعد الطبيب $whenText")
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setContentIntent(openAppIntent(context))
+            .setAutoCancel(true)
+            .build()
+        try { NotificationManagerCompat.from(context).notify(800_000 + apt.id.toInt(), n) } catch (_: SecurityException) {}
     }
 
     const val EXTRA_MED_ID = "med_id"

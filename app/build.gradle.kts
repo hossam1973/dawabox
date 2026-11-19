@@ -49,4 +49,6 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     testImplementation("junit:junit:4.13.2")
+    // real org.json for JVM unit tests (Android's copy is a stub there)
+    testImplementation("org.json:json:20240303")
 }

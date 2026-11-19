@@ -56,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.dawabox.data.AlertChannel
+import com.dawabox.data.AppointmentEntity
 import com.dawabox.data.Frequency
 import com.dawabox.data.MedForm
 import com.dawabox.data.MedicationEntity
@@ -81,12 +82,18 @@ fun MedicationsScreen(
     onEdit: (MedicationEntity) -> Unit,
     onDelete: (MedicationEntity) -> Unit,
     contentPadding: PaddingValues,
+    appointments: List<AppointmentEntity> = emptyList(),
+    onSaveAppointment: (AppointmentEntity) -> Unit = {},
+    onDeleteAppointment: (AppointmentEntity) -> Unit = {},
+    onImport: suspend (String) -> String = { "" },
 ) {
     var confirm by remember { mutableStateOf<MedicationEntity?>(null) }
     LazyColumn(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = contentPadding.calculateTopPadding() + 8.dp, bottom = contentPadding.calculateBottomPadding() + 96.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        item { ClinicSection(appointments, onSaveAppointment, onDeleteAppointment, onImport) }
+        item { Text("الأدوية", style = MaterialTheme.typography.titleLarge) }
         if (meds.isEmpty()) item {
             SectionCard {
                 Text("لا توجد أدوية بعد", style = MaterialTheme.typography.titleMedium)

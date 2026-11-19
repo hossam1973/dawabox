@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.dawabox.data.AlertSettings
+import com.dawabox.data.AppointmentEntity
+import com.dawabox.data.ClinicLink
 import com.dawabox.data.DayCompliance
 import com.dawabox.data.DoseItem
 import com.dawabox.data.DoseLogEntity
@@ -13,6 +15,7 @@ import com.dawabox.data.Repository
 import com.dawabox.data.SettingsStore
 import com.dawabox.data.complianceFor
 import com.dawabox.data.dosesFor
+import com.dawabox.reminders.AppointmentReminders
 import com.dawabox.reminders.CaregiverAlerts
 import com.dawabox.reminders.Notifier
 import com.dawabox.reminders.ReminderScheduler
@@ -93,7 +96,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 }
         }
         // Re-arm all alarms on start (covers app updates and cleared alarms).
-        viewModelScope.launch { ReminderScheduler.scheduleAll(ctx, repo.allMedications()) }
+        viewModelScope.launch {
+            ReminderScheduler.scheduleAll(ctx, repo.allMedications())
+            repo.appointmentsToRemind().forEach { AppointmentReminders.schedule(ctx, it) }
+        }
     }
 
     fun save(med: MedicationEntity, previous: MedicationEntity?) = viewModelScope.launch {
@@ -137,6 +143,69 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         chat.value = chat.value + ChatLine(false, text)
         pillbox.speak(text)
     }
+
+    // ---- doctor appointments ----
+
+    val appointments: StateFlow<List<AppointmentEntity>> =
+        repo.upcomingAppointments().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    fun saveAppointment(a: AppointmentEntity) = viewModelScope.launch {
+        val id = repo.saveAppointment(a)
+        AppointmentReminders.schedule(ctx, a.copy(id = id))
+    }
+
+    fun deleteAppointment(a: AppointmentEntity) = viewModelScope.launch {
+        AppointmentReminders.cancel(ctx, a.id)
+        repo.deleteAppointment(a.id)
+    }
+
+    // ---- link with the clinic platform ----
+
+    /**
+     * Imports a prescription code from the clinic: adds its medications and
+     * appointments and schedules their reminders. Returns a message for the user.
+     */
+    suspend fun importFromClinic(text: String): String {
+        val rx = ClinicLink.decodePrescription(text)
+            ?: return "لم أجد رمز وصفة صالحاً. انسخ الرمز الذي يبدأ بـ DAWA-RX: من منصة العيادة كما هو."
+        val existing = repo.allMedications()
+        var added = 0; var updated = 0
+        rx.meds.forEach { m ->
+            val old = existing.firstOrNull { it.name.trim() == m.name.trim() }
+            if (old != null) ReminderScheduler.cancelAll(ctx, old)
+            val toSave = if (old != null) m.copy(id = old.id, stock = maxOf(old.stock, m.stock)) else m
+            val id = repo.save(toSave)
+            ReminderScheduler.schedule(ctx, toSave.copy(id = id))
+            if (old != null) updated++ else added++
+        }
+        val knownApts = appointments.value
+        var apts = 0
+        rx.appointments.forEach { a ->
+            if (knownApts.none { it.dateTime == a.dateTime && it.doctor == a.doctor }) {
+                val id = repo.saveAppointment(a)
+                AppointmentReminders.schedule(ctx, a.copy(id = id))
+                apts++
+            }
+        }
+        if (settings.value.patientName.isBlank() && rx.patient.isNotBlank()) {
+            settingsStore.update(settings.value.copy(patientName = rx.patient))
+        }
+        val msg = buildString {
+            append("تم استيراد الوصفة")
+            if (rx.clinic.isNotBlank()) append(" من ").append(rx.clinic)
+            append(": $added دواء جديد")
+            if (updated > 0) append("، وتحديث $updated")
+            if (apts > 0) append("، و$apts موعد")
+            append(".")
+        }
+        pillbox.speak(msg)
+        return msg
+    }
+
+    /** Adherence report for the last 7 days, with a code the clinic platform can read. */
+    fun clinicReport(): String = ClinicLink.reportMessage(
+        ClinicLink.Report(settings.value.patientName, today.value.week, medications.value)
+    )
 
     fun updateSettings(s: AlertSettings) = settingsStore.update(s)
 

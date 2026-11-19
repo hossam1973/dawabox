@@ -107,6 +107,27 @@ class DoseActionReceiver : BroadcastReceiver() {
 /** Alarms are wiped on reboot / update: put them back. */
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) = async {
-        ReminderScheduler.scheduleAll(context, Repository.get(context).allMedications())
+        val repo = Repository.get(context)
+        ReminderScheduler.scheduleAll(context, repo.allMedications())
+        repo.appointmentsToRemind().forEach { AppointmentReminders.schedule(context, it) }
+    }
+}
+
+/** Doctor appointment reminder: notification and, if enabled, spoken aloud. */
+class AppointmentReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) = async {
+        val apt = Repository.get(context).appointment(intent.getLongExtra(AppointmentReminders.EXTRA_APT_ID, -1)) ?: return@async
+        val before = intent.getLongExtra(AppointmentReminders.EXTRA_OFFSET, 0)
+        val whenText = if (before >= 24 * 60) "غداً" else "بعد ساعتين"
+        Notifier.showAppointment(context, apt, whenText)
+        if (AlertChannel.VOICE in SettingsStore.get(context).current.enabled) {
+            val text = "تذكير: لديك موعد $whenText مع ${apt.doctor}" +
+                (if (apt.place.isNotBlank()) " في ${apt.place}" else "") + "."
+            withTimeoutOrNull(15_000) {
+                var done = false
+                Speaker.say(context, text) { done = true }
+                while (!done) delay(200)
+            }
+        }
     }
 }

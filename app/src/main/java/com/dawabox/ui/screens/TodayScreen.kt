@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.dawabox.data.AppointmentEntity
 import com.dawabox.data.DoseItem
 import com.dawabox.data.DoseStatus
 import com.dawabox.data.formEnum
@@ -59,6 +60,7 @@ fun TodayScreen(
     onSearch: (String) -> Unit,
     onStatus: (DoseItem, DoseStatus) -> Unit,
     contentPadding: PaddingValues,
+    nextAppointment: AppointmentEntity? = null,
 ) {
     val voiceSearch = rememberVoiceInput("قل اسم الدواء") { onSearch(it) }
     LazyColumn(
@@ -81,6 +83,7 @@ fun TodayScreen(
             )
         }
         item { NextDoseCard(ui, patientName, onStatus) }
+        nextAppointment?.let { a -> item { NextAppointmentCard(a) } }
 
         if (ui.lowStock.isNotEmpty()) item {
             Card(colors = CardDefaults.cardColors(containerColor = WarnAmber.copy(alpha = 0.14f)), shape = RoundedCornerShape(16.dp)) {

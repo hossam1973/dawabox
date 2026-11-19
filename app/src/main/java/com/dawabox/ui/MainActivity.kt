@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.dawabox.data.MedicationEntity
+import com.dawabox.data.at
 import com.dawabox.ui.screens.EditMedicationScreen
 import com.dawabox.ui.screens.HistoryScreen
 import com.dawabox.ui.screens.MedicationsScreen
@@ -91,6 +92,7 @@ private fun App(vm: MainViewModel) {
     val search by vm.search.collectAsStateWithLifecycle()
     val box by vm.pillboxState.collectAsStateWithLifecycle()
     val chat by vm.chat.collectAsStateWithLifecycle()
+    val appointments by vm.appointments.collectAsStateWithLifecycle()
 
     editing?.let { e ->
         BackHandler { editing = null }
@@ -142,11 +144,20 @@ private fun App(vm: MainViewModel) {
         }
     ) { pad ->
         when (tab) {
-            Tab.TODAY -> TodayScreen(today, settings.patientName, search, { vm.search.value = it }, { d, s -> vm.setStatus(d, s) }, pad)
+            Tab.TODAY -> TodayScreen(
+                today, settings.patientName, search, { vm.search.value = it }, { d, s -> vm.setStatus(d, s) }, pad,
+                nextAppointment = appointments.firstOrNull { it.at.isBefore(java.time.LocalDateTime.now().plusDays(7)) }
+            )
             Tab.PILLBOX -> PillboxScreen(box, chat, { vm.talk(it) }, { vm.openCompartment(it) }, pad)
-            Tab.MEDS -> MedicationsScreen(meds, settings.lowStockAt, { editing = Editing(it, false) }, { vm.delete(it) }, pad)
+            Tab.MEDS -> MedicationsScreen(
+                meds, settings.lowStockAt, { editing = Editing(it, false) }, { vm.delete(it) }, pad,
+                appointments = appointments,
+                onSaveAppointment = { vm.saveAppointment(it) },
+                onDeleteAppointment = { vm.deleteAppointment(it) },
+                onImport = { vm.importFromClinic(it) },
+            )
             Tab.HISTORY -> HistoryScreen(meds, logs, pad)
-            Tab.SETTINGS -> SettingsScreen(settings, { vm.updateSettings(it) }, { cb -> vm.testAlerts(cb) }, pad)
+            Tab.SETTINGS -> SettingsScreen(settings, { vm.updateSettings(it) }, { cb -> vm.testAlerts(cb) }, pad, clinicReport = { vm.clinicReport() })
         }
     }
 }

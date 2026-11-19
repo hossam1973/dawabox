@@ -12,6 +12,15 @@ class Repository private constructor(context: Context) {
     private val db = AppDatabase.get(context)
     private val meds = db.medications()
     private val logs = db.doseLogs()
+    private val apts = db.appointments()
+
+    /** Appointments from 6 hours ago onwards, so a visit stays visible on its day. */
+    fun upcomingAppointments(): Flow<List<AppointmentEntity>> =
+        apts.observeFrom(java.time.LocalDateTime.now().minusHours(6).isoMinutes())
+    suspend fun appointmentsToRemind() = apts.upcoming(java.time.LocalDateTime.now().isoMinutes())
+    suspend fun appointment(id: Long) = apts.get(id)
+    suspend fun saveAppointment(a: AppointmentEntity): Long = apts.save(a)
+    suspend fun deleteAppointment(id: Long) = apts.delete(id)
 
     val medications: Flow<List<MedicationEntity>> = meds.observeMedications()
     fun logsSince(from: LocalDate): Flow<List<DoseLogEntity>> = logs.observeSince(from.toString())

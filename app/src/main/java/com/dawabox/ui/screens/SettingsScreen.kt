@@ -51,6 +51,7 @@ fun SettingsScreen(
     onChange: (AlertSettings) -> Unit,
     onTest: ((List<String>) -> Unit) -> Unit,
     contentPadding: PaddingValues,
+    clinicReport: () -> String = { "" },
 ) {
     val context = LocalContext.current
     var draft by remember(settings) { mutableStateOf(settings) }
@@ -99,6 +100,24 @@ fun SettingsScreen(
                     Text("جرّب كل وسائل التنبيه الآن")
                 }
                 report.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
+            }
+        }
+        item {
+            SectionCard {
+                Text("مشاركة التقرير مع العيادة", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "يرسل ملخص التزامك لآخر 7 أيام ومخزون أدويتك، مع رمز تلصقه العيادة في منصة تذكرة فيُحدَّث ملفك عندهم.",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = {
+                    val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+                        .putExtra(Intent.EXTRA_SUBJECT, "تقرير الالتزام بالدواء")
+                        .putExtra(Intent.EXTRA_TEXT, clinicReport())
+                    context.startActivity(Intent.createChooser(send, "إرسال التقرير إلى العيادة"))
+                }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp)) {
+                    Text("إرسال تقرير الالتزام")
+                }
             }
         }
         item {

@@ -8,6 +8,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -53,15 +55,27 @@ interface DoseLogDao {
     suspend fun remove(medId: Long, date: String, time: String)
 }
 
-@Database(entities = [MedicationEntity::class, DoseLogEntity::class], version = 1, exportSchema = false)
+@Database(entities = [MedicationEntity::class, DoseLogEntity::class, AppointmentEntity::class], version = 2, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun medications(): MedicationDao
     abstract fun doseLogs(): DoseLogDao
+    abstract fun appointments(): AppointmentDao
 
     companion object {
         @Volatile private var instance: AppDatabase? = null
+
+        /** v2 adds doctor appointments; keeps existing medications and logs. */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `appointments` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`doctor` TEXT NOT NULL, `place` TEXT NOT NULL, `dateTime` TEXT NOT NULL, `notes` TEXT NOT NULL)"
+                )
+            }
+        }
         fun get(context: Context): AppDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "dawabox.db")
+                .addMigrations(MIGRATION_1_2)
                 .fallbackToDestructiveMigration()
                 .build().also { instance = it }
         }
